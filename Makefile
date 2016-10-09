@@ -1,6 +1,6 @@
 all: calc
 
-calc: lexer.cmo parser.cmo calc.cmo
+calc: ast.cmo lexer.cmo parser.cmo calc.cmo
 	ocamlc -o $@ $?
 
 %.cmo: %.ml

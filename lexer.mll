@@ -1,14 +1,23 @@
 (* File lexer.mll *)
 {
 open Parser        (* The type token is defined in parser.mli *)
+open Char
 exception Eof
 }
 rule token = parse
-    [' ' '\t']     { token lexbuf }     (* skip blanks *)
-  | ['\n' ]        { EOL }
-  | ['0'-'9']+ as lxm { INT(int_of_string lxm) }
-  | ("int"|"bool"|"chan int") as lxm { TYPE(lxm) }
-  | ['a'-'z']+ as lxm { VARS(lxm) }
+    [' ' '\t' '\n']     { token lexbuf }     (* skip blanks *)
+  | "int"          { INT }
+  | "bool"         { BOOL }
+  | "chan int"     { CHANINT }
+  | "true"         { TRUE }
+  | "false"        { FALSE }
+  | ['a'-'z']+ as lxm { LETTER lxm }
+  | ['0'-'9']+ as lxm { DIGIT lxm }
+  | "<-"           { CHANOP }
+  | '>'            { GREATER }
+  | "=="           { EQUAL }
+  | "&&"           { AND }
+  | '!'            { NOT }
   | ','            { COMMA }
   | '+'            { PLUS }
   | '-'            { MINUS }
@@ -16,4 +25,4 @@ rule token = parse
   | '/'            { DIV }
   | '('            { LPAREN }
   | ')'            { RPAREN }
-  | eof            { raise Eof }
+  | eof            { EOF }
