@@ -11,13 +11,24 @@ rule token = parse
   | "chan int"     { CHANINT }
   | "true"         { TRUE }
   | "false"        { FALSE }
+  | "while"        { WHILE }
+  | "if"           { IF }
+  | "else"         { ELSE }
+  | "return"       { RETURN }
+  | "print"        { PRINT }
+  | "func"         { FUNC }
+  | "go"           { GO }
+  | "newChannel"   { NEWCHAN }
   | ['a'-'z']+ as lxm { LETTER lxm }
   | ['0'-'9']+ as lxm { DIGIT lxm }
   | "<-"           { CHANOP }
   | '>'            { GREATER }
   | "=="           { EQUAL }
+  | ":="           { DECLAR }
+  | '='            { ASSIGN }
   | "&&"           { AND }
   | '!'            { NOT }
+  | ';'            { SEMI }
   | ','            { COMMA }
   | '+'            { PLUS }
   | '-'            { MINUS }
@@ -25,4 +36,6 @@ rule token = parse
   | '/'            { DIV }
   | '('            { LPAREN }
   | ')'            { RPAREN }
+  | '{'            { LCURLY }
+  | '}'            { RCURLY }
   | eof            { EOF }
