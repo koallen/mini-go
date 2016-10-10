@@ -19,3 +19,4 @@ clean:
 	rm *.cmo *.cmi lexer.ml parser.mli parser.ml calc
 
 testchecker: ast.cmo checker.cmo
+	ocaml testchecker.ml
