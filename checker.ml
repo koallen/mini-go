@@ -110,7 +110,7 @@ let rec inferTyExp env e = match e with
 									  else None
                                              | _ -> None )
                              | None -> None )
-  | _ -> None 
+  | _ -> None
 
 			    
 (* type checking statements *)
