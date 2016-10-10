@@ -8,9 +8,9 @@ This is a compiler for the mini GO language.
 
 ## Progress
 
-[x] Stage 1: Lexical and syntax analysis
-[ ] Stage 2: Type checking
-[ ] Stage 3: Intermediate code generation
+- [x] Stage 1: Lexical and syntax analysis
+- [ ] Stage 2: Type checking
+- [ ] Stage 3: Intermediate code generation
 
 ## Testing
 
