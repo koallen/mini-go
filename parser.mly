@@ -25,9 +25,11 @@
 %type <Ast.prog> prog
 %%
 prog:
-    proc block    { Prog ($1::[], $2) }
-  | proc prog     { match $2 with
-                    | Prog (procs, statement) -> Prog ($1::procs, statement)}
+    proclist block { Prog ($1, $2) }
+;
+proclist:
+    proc proclist { $1::$2 }
+  |               { [] }
 ;
 proc:
     FUNC name LPAREN RPAREN block { Proc ($2, [], None, $5) }
