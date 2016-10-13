@@ -25,7 +25,7 @@
 %type <Ast.prog> prog
 %%
 prog:
-    proclist block { Prog ($1, $2) }
+    proclist block EOF { Prog ($1, $2) }
 ;
 proclist:
     proc proclist { $1::$2 }
