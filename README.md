@@ -19,3 +19,11 @@ To test type checking, run the following command
 ```bash
 $ make testchecker
 ```
+
+## Compilation
+
+To compile a mini-go source program, type the following command
+
+```bash
+$ ./calc /path/to/your/program
+```
