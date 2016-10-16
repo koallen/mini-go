@@ -13,9 +13,9 @@ let _ =
     let source = file_to_string Sys.argv.(1) in
     let lexbuf = Lexing.from_string source in
     let result = Parser.prog Lexer.token lexbuf in
-      Printf.printf "%s" "Parsing is successful!";
-      print_newline();
-      flush stdout
+    Printf.printf "%b" (Checker.typeCheckProgram result);
+    print_newline();
+    flush stdout
   with Parsing.Parse_error ->
       Printf.printf "%s" "Syntax error!\n";
   | Invalid_argument error_message ->

@@ -5,9 +5,11 @@ let rec eqTy t1 t2 = match (t1,t2) with
   | (TyInt, TyInt) -> true
   | (TyBool, TyBool) -> true
   | (TyChan t1, TyChan t2) -> eqTy t1 t2
-  | (TyFunc (ts1, t1), TyFunc (ts2, t2)) -> eqTy t1 t2 &&
+  | (TyFunc (ts1, Some t1), TyFunc (ts2, Some t2)) -> eqTy t1 t2 &&
                                             (List.length ts1 == List.length ts2) &&
                                             (List.for_all (fun (t1,t2) -> eqTy t1 t2) (List.combine ts1 ts2))
+  | (TyFunc (ts1, None), TyFunc (ts2, None)) -> (List.length ts1 == List.length ts2) &&
+                                                (List.for_all (fun (t1,t2) -> eqTy t1 t2) (List.combine ts1 ts2))
   | _ -> false
 
 (* environment lookup *)
@@ -16,6 +18,12 @@ let lookup el lst = try (Some (snd (List.find (fun (el2,_) -> el = el2) lst))) w
 
 let getType somety = match somety with
                      | Some x -> x
+
+let extendEnv env var1 type1 =
+    let result = lookup var1 env in
+    match result with
+    | Some _ -> env (* to be implemented *)
+    | None -> ((var1, type1)::env)
 
 (* type checking expressions *)
 let rec inferTyExp env e = match e with
@@ -101,18 +109,18 @@ let rec inferTyExp env e = match e with
   | FuncExp (name, args) -> let funTy= lookup name env in
                             (match funTy with 
               	             | Some func -> (match func with
-                                             | TyFunc(paramsTy, retTy) -> let argTypes = List.map (fun x -> (inferTyExp env x)) args in
+                                             | TyFunc(paramsTy, Some retTy) -> let argTypes = List.map (fun x -> (inferTyExp env x)) args in
                                                                           if (List.exists (fun x -> match x with
                                                                                                     | None -> true
                                                                                                     | _ -> false) argTypes) then None
-                                                                          else if (eqTy func (TyFunc(List.map getType argTypes, retTy))) then Some retTy
-									  else None
+                                                                          else if (eqTy func (TyFunc(List.map getType argTypes, Some retTy))) then Some retTy
+                                                                          else None
                                              | _ -> None )
                              | None -> None )
   | _ -> None
 
 (* type checking statements *)
-let rec typeCheckStmt env stmt = match stmt with
+let rec typeCheckStmt env stmt funcName = match stmt with
   | Assign (v,e) -> (match (lookup v env) with
                     | None -> None (* Unknown variable *)
                     | Some t1 -> let t2 = inferTyExp env e in
@@ -121,45 +129,45 @@ let rec typeCheckStmt env stmt = match stmt with
                                  | Some t3 -> if eqTy t1 t3
                                               then Some env
                                               else None)
-  | Seq (stmt1, stmt2) -> let g1 = typeCheckStmt env stmt1 in
+  | Seq (stmt1, stmt2) -> let g1 = typeCheckStmt env stmt1 funcName in
                           (match g1 with
                           | None -> None
-                          | Some env1 -> let g2 = typeCheckStmt env1 stmt2 in
+                          | Some env1 -> let g2 = typeCheckStmt env1 stmt2 funcName in
                                          (match g2 with
                                          | None -> None
                                          | Some env2 -> Some env2))
-  | Go stmt1 -> let g1 = typeCheckStmt env stmt1 in
+  | Go stmt1 -> let g1 = typeCheckStmt env stmt1 funcName in
                 (match g1 with
                 | None -> None
                 | Some _ -> Some env)
   | Transmit (chan, exp1) -> let type1 = inferTyExp env exp1 in
                              (match type1 with
-                             | Some IConst -> let type2 = lookup env chan in
+                             | Some TyInt -> let type2 = lookup chan env in
                                               (match type2 with
                                               | Some (TyChan TyInt) -> Some env
                                               | _ -> None)
                              | _ -> None)
-  | RcvStmt chan -> let type1 = lookup env chan in
+  | RcvStmt chan -> let type1 = lookup chan env in
                     (match type1 with
-                    | Some (TyChan TyInt) -> Some env)
+                    | Some (TyChan TyInt) -> Some env
                     | _ -> None)
   | Decl (var, exp1) -> let type1 = inferTyExp env exp1 in
                         (match type1 with
-                        | Some x -> extendEnv env var x
+                        | Some x -> Some (extendEnv env var x)
                         | None -> None)
-  | DeclChan chan -> extendEnv env chan (TyChan TyInt)
+  | DeclChan chan -> Some (extendEnv env chan (TyChan TyInt))
   | While (exp1, stmt1) -> let type1 = inferTyExp env exp1 in
                            (match type1 with
-                            | Some BConst -> let g2 = typeCheckStmt env stmt1 in
+                            | Some TyBool -> let g2 = typeCheckStmt env stmt1 funcName in
                                              (match g2 with
                                               | Some env2 -> Some env
                                               | None -> None)
                             | _ -> None)
   | ITE (exp1, stmt1, stmt2) -> let type1 = inferTyExp env exp1 in
                                 (match type1 with
-                                | Some BConst -> let g1 = typeCheckStmt env stmt1 in
+                                | Some TyBool -> let g1 = typeCheckStmt env stmt1 funcName in
                                                  (match g1 with
-                                                 | Some env1 -> let g2 = typeCheckStmt env stmt2 in
+                                                 | Some env1 -> let g2 = typeCheckStmt env stmt2 funcName in
                                                                 (match g2 with
                                                                 | Some env2 -> Some env
                                                                 | None -> None)
@@ -167,19 +175,79 @@ let rec typeCheckStmt env stmt = match stmt with
                                 | _ -> None)
   | Return exp1 -> let type1 = inferTyExp env exp1 in
                    (match type1 with
-                   | Some x -> let funcDef = lookup env 
-                   | None -> )
+                   | Some x -> let funcDef = lookup funcName env in
+                               (match funcDef with
+                               | Some (TyFunc (_, Some returnType)) -> if eqTy x returnType then Some env
+                                                                else None
+                               | _ -> None)
+                   | None -> None)
+  | FuncCall (name, args) -> let funcDef = lookup name env in
+                             (match funcDef with
+                             | Some (TyFunc (params, retTy)) -> let argTypes = List.map (fun x -> (inferTyExp env x)) args in
+                                                                if (List.exists (fun x -> match x with
+                                                                                 | None -> true
+                                                                                 | _ -> false) argTypes) then None
+                                                                else if (eqTy (TyFunc (params, retTy)) (TyFunc(List.map getType argTypes, retTy))) then Some env
+                                                                else None
+                             | _ -> None)
+  | Print exp1 -> let type1 = inferTyExp env exp1 in
+                  (match type1 with
+                  | Some x -> Some env
+                  | None -> None)
 
-let extendEnv env var1 type1 =
-    let result = lookup env var1 in
-    match result with
-    | Some _ -> env (* to be implemented *)
-    | None -> (var1, type1)::env
+let rec collectFuncs procs env = match procs with
+  | proc::remainingProcs -> (match proc with
+                            | Proc (name, [], None, _) -> let newEnv = extendEnv env name (TyFunc([], None)) in
+                                                          collectFuncs remainingProcs newEnv
+                            | Proc (name, [], Some retTy, _) -> let newEnv = extendEnv env name (TyFunc([], Some retTy)) in
+                                                                collectFuncs remainingProcs newEnv
+                            | Proc (name, params, None, _) -> let newEnv = extendEnv env name (TyFunc(List.map (fun x -> match x with
+                                                                                                              | (exp1, type1) -> type1)
+                                                                                                              params, None)) in
+                                                              collectFuncs remainingProcs newEnv
+                            | Proc (name, params, Some retTy, _) -> let newEnv = extendEnv env name (TyFunc(List.map (fun x -> match x with
+                                                                                                              | (exp1, type1) -> type1)
+                                                                                                              params, Some retTy)) in
+                                                              collectFuncs remainingProcs newEnv)
+  | proc::[] -> (match proc with
+                            | Proc (name, [], None, _) -> extendEnv env name (TyFunc([], None))
+                            | Proc (name, [], Some retTy, _) -> extendEnv env name (TyFunc([], Some retTy))
+                            | Proc (name, params, None, _) -> extendEnv env name (TyFunc(List.map (fun x -> match x with
+                                                                                                              | (exp1, type1) -> type1)
+                                                                                                              params, None))
+                            | Proc (name, params, Some retTy, _) -> extendEnv env name (TyFunc(List.map (fun x -> match x with
+                                                                                                              | (exp1, type1) -> type1)
+                                                                                                              params, Some retTy)))
+   | [] -> env
 
+let rec addParamsToEnv params env = match params with
+  | param::remainingParams -> (match param with
+                              | (Var var1, type1) -> let newEnv = extendEnv env var1 type1 in
+                                                 addParamsToEnv remainingParams newEnv)
+  | param::[] -> (match param with
+                | (Var var1, type1) -> extendEnv env var1 type1)
+  | [] -> env
 
-(*
-What's still missing are implementations for
-    (1) collection of type signatures from functions (procedures)
-    (2) type checking of procedure bodies, and
-    (3) type checking of the main program.
-*)
+let rec typeCheckFunctions procs env = match procs with
+  | proc::remainingProcs -> (match proc with
+                            | Proc (name, params, _, body) -> let envWithParam = addParamsToEnv params env in
+                                                         let checkedEnv = typeCheckStmt envWithParam body name in
+                                                         (match checkedEnv with
+                                                         | Some _ -> typeCheckFunctions remainingProcs env
+                                                         | None -> false))
+  | proc::[] -> (match proc with
+                | Proc (name, params, _, body) -> let envWithParam = addParamsToEnv params env in
+                                             let checkedEnv = typeCheckStmt envWithParam body name in
+                                             (match checkedEnv with
+                                             | Some env1 -> true
+                                             | None -> false))
+   | [] -> true
+
+let typeCheckProgram prog = match prog with
+  | Prog (procs, main) -> let envWithFunc = collectFuncs procs [] in
+                          if typeCheckFunctions procs envWithFunc then
+                            let typeCheckMain = typeCheckStmt envWithFunc main "" in
+                            (match typeCheckMain with
+                            | Some _ -> true
+                            | None -> false)
+                          else false

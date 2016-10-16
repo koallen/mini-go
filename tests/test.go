@@ -1,11 +1,6 @@
-func max(a int, b int) int {
-    if (a > b) {
-        return a
-    } else {
-        return b
-    }
-}
-
 {
-    return max(1, 2)
+    x := 1;
+    while (x > 0) {
+        x = x - 1
+    }
 }

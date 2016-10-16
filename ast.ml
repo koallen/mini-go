@@ -5,7 +5,7 @@ and proc = Proc of string * ((exp * types) list) * (types option) * stmt
 and types = TyInt
            | TyBool
            | TyChan of types
-           | TyFunc of (types list * types)
+           | TyFunc of (types list * types option)
 
 and stmt = Seq of stmt * stmt
           | Go of stmt
@@ -54,4 +54,12 @@ let string_of_type ty = match ty with
     | TyInt        -> "TyInt"
     | TyBool       -> "TyBool"
     | TyChan TyInt -> "TyChan TyInt"
-    | _            -> ""
+    | _            -> "TyFunc"
+
+let rec string_of_env env = match env with
+    | binding1::remainingBindings -> (match binding1 with
+                                     | (var1, type1) -> var1 ^ ", " ^ (string_of_type type1) ^ "\n" ^ (string_of_env remainingBindings))
+    | binding1::[] -> (match binding1 with
+                                     | (var1, type1) -> var1 ^ ", " ^ (string_of_type type1) ^ "\n")
+    | [] -> ""
+
