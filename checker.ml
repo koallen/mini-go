@@ -22,7 +22,9 @@ let getType somety = match somety with
 let extendEnv env var1 type1 =
     let result = lookup var1 env in
     match result with
-    | Some _ -> env (* to be implemented *)
+    | Some _ -> let envWithoutVar1 = List.filter (fun x -> match x with
+                                                           | (var2, _) -> if var1 = var2 then false else true) env in
+                ((var1, type1)::envWithoutVar1)
     | None -> ((var1, type1)::env)
 
 (* type checking expressions *)
