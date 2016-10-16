@@ -8,7 +8,7 @@ let rec eqTy t1 t2 = match (t1,t2) with
   | (TyFunc (ts1, t1), TyFunc (ts2, t2)) -> eqTy t1 t2 &&
                                             (List.length ts1 == List.length ts2) &&
                                             (List.for_all (fun (t1,t2) -> eqTy t1 t2) (List.combine ts1 ts2))
-  | _ -> false  
+  | _ -> false
 
 (* environment lookup *)
 let lookup el lst = try (Some (snd (List.find (fun (el2,_) -> el = el2) lst))) with
@@ -16,7 +16,6 @@ let lookup el lst = try (Some (snd (List.find (fun (el2,_) -> el = el2) lst))) w
 
 let getType somety = match somety with
                      | Some x -> x
-                     
 
 (* type checking expressions *)
 let rec inferTyExp env e = match e with
@@ -112,17 +111,70 @@ let rec inferTyExp env e = match e with
                              | None -> None )
   | _ -> None
 
-			    
 (* type checking statements *)
 let rec typeCheckStmt env stmt = match stmt with
-  | Assign (v,e) -> match (lookup v env) with
+  | Assign (v,e) -> (match (lookup v env) with
                     | None -> None (* Unknown variable *)
                     | Some t1 -> let t2 = inferTyExp env e in
                                  match t2 with
                                  | None -> None
                                  | Some t3 -> if eqTy t1 t3
                                               then Some env
-                                              else None
+                                              else None)
+  | Seq (stmt1, stmt2) -> let g1 = typeCheckStmt env stmt1 in
+                          (match g1 with
+                          | None -> None
+                          | Some env1 -> let g2 = typeCheckStmt env1 stmt2 in
+                                         (match g2 with
+                                         | None -> None
+                                         | Some env2 -> Some env2))
+  | Go stmt1 -> let g1 = typeCheckStmt env stmt1 in
+                (match g1 with
+                | None -> None
+                | Some _ -> Some env)
+  | Transmit (chan, exp1) -> let type1 = inferTyExp env exp1 in
+                             (match type1 with
+                             | Some IConst -> let type2 = lookup env chan in
+                                              (match type2 with
+                                              | Some (TyChan TyInt) -> Some env
+                                              | _ -> None)
+                             | _ -> None)
+  | RcvStmt chan -> let type1 = lookup env chan in
+                    (match type1 with
+                    | Some (TyChan TyInt) -> Some env)
+                    | _ -> None)
+  | Decl (var, exp1) -> let type1 = inferTyExp env exp1 in
+                        (match type1 with
+                        | Some x -> extendEnv env var x
+                        | None -> None)
+  | DeclChan chan -> extendEnv env chan (TyChan TyInt)
+  | While (exp1, stmt1) -> let type1 = inferTyExp env exp1 in
+                           (match type1 with
+                            | Some BConst -> let g2 = typeCheckStmt env stmt1 in
+                                             (match g2 with
+                                              | Some env2 -> Some env
+                                              | None -> None)
+                            | _ -> None)
+  | ITE (exp1, stmt1, stmt2) -> let type1 = inferTyExp env exp1 in
+                                (match type1 with
+                                | Some BConst -> let g1 = typeCheckStmt env stmt1 in
+                                                 (match g1 with
+                                                 | Some env1 -> let g2 = typeCheckStmt env stmt2 in
+                                                                (match g2 with
+                                                                | Some env2 -> Some env
+                                                                | None -> None)
+                                                 | None -> None)
+                                | _ -> None)
+  | Return exp1 -> let type1 = inferTyExp env exp1 in
+                   (match type1 with
+                   | Some x -> let funcDef = lookup env 
+                   | None -> )
+
+let extendEnv env var1 type1 =
+    let result = lookup env var1 in
+    match result with
+    | Some _ -> env (* to be implemented *)
+    | None -> (var1, type1)::env
 
 
 (*
