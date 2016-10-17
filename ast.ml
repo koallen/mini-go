@@ -59,7 +59,5 @@ let string_of_type ty = match ty with
 let rec string_of_env env = match env with
     | binding1::remainingBindings -> (match binding1 with
                                      | (var1, type1) -> var1 ^ ", " ^ (string_of_type type1) ^ "\n" ^ (string_of_env remainingBindings))
-    | binding1::[] -> (match binding1 with
-                                     | (var1, type1) -> var1 ^ ", " ^ (string_of_type type1) ^ "\n")
     | [] -> ""
 

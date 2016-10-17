@@ -18,6 +18,7 @@ let lookup el lst = try (Some (snd (List.find (fun (el2,_) -> el = el2) lst))) w
 
 let getType somety = match somety with
                      | Some x -> x
+                     | None -> failwith "runtime error"
 
 let extendEnv env var1 type1 =
     let result = lookup var1 env in
@@ -185,6 +186,7 @@ let rec typeCheckStmt env stmt funcName = match stmt with
                   (match type1 with
                    | Some x -> Some env
                    | None -> None)
+  | Skip -> None
 
 let rec collectFuncs procs env = match procs with
   | proc::remainingProcs -> (match proc with
@@ -200,23 +202,13 @@ let rec collectFuncs procs env = match procs with
                                                                                                                                 | (exp1, type1) -> type1)
                                                                                                                       params, Some retTy)) in
                                                                      collectFuncs remainingProcs newEnv)
-  | proc::[] -> (match proc with
-                            | Proc (name, [], None, _) -> extendEnv env name (TyFunc([], None))
-                            | Proc (name, [], Some retTy, _) -> extendEnv env name (TyFunc([], Some retTy))
-                            | Proc (name, params, None, _) -> extendEnv env name (TyFunc(List.map (fun x -> match x with
-                                                                                                            | (exp1, type1) -> type1)
-                                                                                                  params, None))
-                            | Proc (name, params, Some retTy, _) -> extendEnv env name (TyFunc(List.map (fun x -> match x with
-                                                                                                                  | (exp1, type1) -> type1)
-                                                                                                        params, Some retTy)))
    | [] -> env
 
 let rec addParamsToEnv params env = match params with
   | param::remainingParams -> (match param with
                                | (Var var1, type1) -> let newEnv = extendEnv env var1 type1 in
-                                                      addParamsToEnv remainingParams newEnv)
-  | param::[] -> (match param with
-                  | (Var var1, type1) -> extendEnv env var1 type1)
+                                                      addParamsToEnv remainingParams newEnv
+                               | _ -> failwith "runtime error")
   | [] -> env
 
 let rec typeCheckFunctions procs env = match procs with
@@ -226,12 +218,6 @@ let rec typeCheckFunctions procs env = match procs with
                                                                (match checkedEnv with
                                                                 | Some _ -> typeCheckFunctions remainingProcs env
                                                                 | None -> false))
-  | proc::[] -> (match proc with
-                 | Proc (name, params, _, body) -> let envWithParam = addParamsToEnv params env in
-                                                   let checkedEnv = typeCheckStmt envWithParam body name in
-                                                   (match checkedEnv with
-                                                    | Some env1 -> true
-                                                    | None -> false))
    | [] -> true
 
 let typeCheckProgram prog = match prog with

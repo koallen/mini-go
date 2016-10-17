@@ -4,3 +4,4 @@ lexer.ml
 parser.mli
 parser.ml
 calc
+*.output

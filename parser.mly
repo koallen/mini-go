@@ -45,15 +45,20 @@ statement:
     statement SEMI statement { Seq ($1, $3) }
   | GO block                 { Go $2 }
   | vars CHANOP aexp         { match $1 with
-                               | Var s -> Transmit (s, $3)}
+                               | Var s -> Transmit (s, $3)
+                               | _ -> failwith "parsing error" }
   | CHANOP vars              { match $2 with
-                               | Var s -> RcvStmt s}
+                               | Var s -> RcvStmt s
+                               | _ -> failwith "parsing error" }
   | vars DECLAR bexp         { match $1 with
-                               | Var s -> Decl (s, $3)}
+                               | Var s -> Decl (s, $3)
+                               | _ -> failwith "parsing error" }
   | vars DECLAR NEWCHAN      { match $1 with
-                               | Var s -> DeclChan s}
+                               | Var s -> DeclChan s
+                               | _ -> failwith "parsing error" }
   | vars ASSIGN bexp         { match $1 with
-                               | Var s -> Assign (s, $3)}
+                               | Var s -> Assign (s, $3)
+                               | _ -> failwith "parsing error" }
   | WHILE bexp block         { While ($2, $3) }
   | IF bexp block ELSE block { ITE ($2, $3, $5) }
   | RETURN bexp              { Return $2 }
@@ -90,7 +95,8 @@ factor:
   | bools   { $1 }
   | vars    { $1 }
   | CHANOP vars { match $2 with
-                  | Var s -> RcvExp s }
+                  | Var s -> RcvExp s
+                  | _ -> failwith "parsing error" }
   | NOT factor { Not $2 }
   | LPAREN bexp RPAREN { $2 }
   | name LPAREN arg RPAREN { FuncExp ($1, $3) }
