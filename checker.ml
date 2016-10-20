@@ -211,13 +211,27 @@ let rec addParamsToEnv params env = match params with
                                | _ -> failwith "runtime error")
   | [] -> env
 
+let rec checkReturnStatement body = match body with
+  | Seq (_, remainingStatements) -> checkReturnStatement remainingStatements
+  | Return _ -> true
+  | _ -> false
+
 let rec typeCheckFunctions procs env = match procs with
   | proc::remainingProcs -> (match proc with
-                             | Proc (name, params, _, body) -> let envWithParam = addParamsToEnv params env in
-                                                               let checkedEnv = typeCheckStmt envWithParam body name in
-                                                               (match checkedEnv with
-                                                                | Some _ -> typeCheckFunctions remainingProcs env
-                                                                | None -> false))
+                             | Proc (name, params, None, body) -> let envWithParam = addParamsToEnv params env in
+                                                                  let checkedEnv = typeCheckStmt envWithParam body name in
+                                                                  (match checkedEnv with
+                                                                   | Some _ -> typeCheckFunctions remainingProcs env
+                                                                   | None -> false)
+                             | Proc (name, params, Some _, body) -> if (not (checkReturnStatement body)) then
+                                                                        false
+                                                                    else begin
+                                                                        let envWithParam = addParamsToEnv params env in
+                                                                        let checkedEnv = typeCheckStmt envWithParam body name in
+                                                                        (match checkedEnv with
+                                                                         | Some _ -> typeCheckFunctions remainingProcs env
+                                                                         | None -> false)
+                                                                    end)
    | [] -> true
 
 let typeCheckProgram prog = match prog with
