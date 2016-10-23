@@ -1,3 +1,5 @@
+open Ast
+
 let nameSupply = ref 1
 let freshName _ =  nameSupply := !nameSupply + 1;
                    String.concat "" ["temp" ; string_of_int (!nameSupply )] 

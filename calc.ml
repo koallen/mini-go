@@ -12,12 +12,16 @@ let _ =
   try
     let source = file_to_string Sys.argv.(1) in
     let lexbuf = Lexing.from_string source in
-    let result = Parser.prog Lexer.token lexbuf in
-    Printf.printf "%b" (Checker.typeCheckProgram result);
-    print_newline();
+    let prog = Parser.prog Lexer.token lexbuf in
+    if Checker.typeCheckProgram prog then
+        (Normalization.normalizeProg prog)
+    else
+        failwith "Type error!";
     flush stdout
   with Parsing.Parse_error ->
       Printf.printf "%s" "Syntax error!\n";
   | Invalid_argument error_message ->
       Printf.printf "%s" "Usage: ./calc main.go\n";
       exit 0
+  | Failure error_message ->
+          Printf.printf "%s" error_message;
