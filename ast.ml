@@ -35,6 +35,8 @@ and exp = And of exp * exp
          | Var of string
          | FuncExp of string * (exp list)
 
+and environ = Environ of (environ option * (string * types) list)
+
 let rec string_of_exp exp = match exp with
     | And (exp1, exp2)       -> "And (" ^ (string_of_exp exp1) ^ ", " ^ (string_of_exp exp2) ^ ")"
     | Eq (exp1, exp2)        -> "Eq (" ^ (string_of_exp exp1) ^ ", " ^ (string_of_exp exp2) ^ ")"

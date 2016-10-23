@@ -16,7 +16,7 @@ lexer.ml: lexer.mll parser.cmi
 	ocamllex lexer.mll
 
 clean:
-	rm *.cmo *.cmi lexer.ml parser.mli parser.ml calc
+	rm -f *.cmo *.cmi lexer.ml parser.mli parser.ml calc
 
 testchecker: ast.cmo checker.cmo
 	ocaml testchecker.ml

@@ -3,5 +3,7 @@ func min(a int, b int) {
 }
 
 {
-    min(3, 4)
+    x := false;
+    while x { y := x };
+    x = true
 }
