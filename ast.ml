@@ -58,8 +58,14 @@ let string_of_type ty = match ty with
     | TyChan TyInt -> "TyChan TyInt"
     | _            -> "TyFunc"
 
-let rec string_of_env env = match env with
-    | binding1::remainingBindings -> (match binding1 with
-                                     | (var1, type1) -> var1 ^ ", " ^ (string_of_type type1) ^ "\n" ^ (string_of_env remainingBindings))
-    | [] -> ""
+let rec string_of_stmt stmt = match stmt with
+    | Decl (var, exp) -> "Decl (" ^ var ^ ", " ^ string_of_exp exp ^ ")"
+
+let string_of_prog prog = match prog with
+    | Prog (procs, main) -> string_of_stmt main
+
+(*let rec string_of_env env = match env with*)
+    (*| binding1::remainingBindings -> (match binding1 with*)
+                                     (*| (var1, type1) -> var1 ^ ", " ^ (string_of_type type1) ^ "\n" ^ (string_of_env remainingBindings))*)
+    (*| [] -> ""*)
 

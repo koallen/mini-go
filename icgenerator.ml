@@ -22,11 +22,6 @@ and irc_exp = IRC_And of string * string
             | IRC_IConst of int
             | IRC_Var of string
 
-(* short-hand for 'zero' jump *)
-let irc_ZeroJump (x,l) = let y = freshName() in
-                         [IRC_Assign (y, IRC_Not x);
-                          IRC_NonzeroJump (y,l)]
-
 let nameSupply = ref 1
 let freshName _ =  nameSupply := !nameSupply + 1;
                    String.concat "" ["temp" ; string_of_int (!nameSupply )] 
@@ -34,6 +29,11 @@ let freshName _ =  nameSupply := !nameSupply + 1;
 let labelSupply = ref 1
 let freshLabel _ =  labelSupply := !labelSupply + 1;
                     !labelSupply
+
+(* short-hand for 'zero' jump *)
+let irc_ZeroJump (x,l) = let y = freshName() in
+                         [IRC_Assign (y, IRC_Not x);
+                          IRC_NonzeroJump (y,l)]
 
 
 (* (parts) of translation of Booleans (short-circuit evaluation!),
@@ -73,3 +73,28 @@ let rec translateB exp = match exp with
                       IRC_Assign (x, IRC_IConst 0);
                       IRC_Label l2],
                      x)
+
+let rec translateExp exp = match exp with
+  | Plus (e1, e2) -> let r1 = translateExp e1 in
+                     let r2 = translateExp e2 in
+                     let x = freshName() in
+                     ((fst r1)
+                      @
+                      (fst r2)
+                      @
+                      [IRC_Assign (x, IRC_Plus (snd r1, snd r2))],
+                      x)
+  | IConst integer -> let x = freshName() in
+                      ([IRC_Assign (x, IRC_IConst integer)],
+                       x)
+
+let rec translateStmt stmt = match stmt with
+  | Decl (var, exp) -> let r1 = translateExp exp in
+                       ((fst r1)
+                        @
+                        [(IRC_Assign (var, IRC_Var (snd r1)))],
+                        var)
+
+let translateProg prog = match prog with
+  | Prog (procs, main) -> translateStmt main
+

@@ -1,6 +1,6 @@
 all: calc
 
-calc: ast.cmo lexer.cmo parser.cmo checker.cmo normalization.cmo calc.cmo
+calc: ast.cmo lexer.cmo parser.cmo checker.cmo normalization.cmo icgenerator.cmo calc.cmo
 	ocamlc -o $@ $?
 
 %.cmo: %.ml
