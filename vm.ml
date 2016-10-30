@@ -1,4 +1,4 @@
- simple stack-based VM with shared memory *)
+ (*simple stack-based VM with shared memory *)
 
 (* VM supports only integers, so Booleans need to be mapped to integer
    where 0 = false and 1 = true
@@ -176,7 +176,7 @@ let singleStep id mem memLock t = match (List.nth t.code !(t.pc)) with
               false
  
   | Assign (loc,i) -> inc t.pc;
-                      mem.(loc) <- 1;
+                      mem.(loc) <- i;
                       false
 
   | PushToStack loc -> inc t.pc;

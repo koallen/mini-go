@@ -21,6 +21,8 @@
 %token SEMI
 %token COMMA
 %token EOF
+%left PLUS MINUS
+%left TIMES DIV
 %start prog             /* the entry point */
 %type <Ast.prog> prog
 %%

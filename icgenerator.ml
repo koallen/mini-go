@@ -8,6 +8,7 @@ and irc_cmd = IRC_Assign of string * irc_exp
             | IRC_NonzeroJump of string * int  (* if x L = if x non-zero then jump to L *)
             | IRC_Param of string
             | IRC_Call of int * int (* (label, number of parameters *)
+            | IRC_Print of irc_exp
             | IRC_Return of string
             | IRC_Get of string
 
@@ -74,9 +75,9 @@ let rec translateB exp = match exp with
                       IRC_Label l2],
                      x)
 
-let rec translateExp exp = match exp with
-  | Plus (e1, e2) -> let r1 = translateExp e1 in
-                     let r2 = translateExp e2 in
+let rec translateExp exp env = match exp with
+  | Plus (e1, e2) -> let r1 = translateExp e1 env in
+                     let r2 = translateExp e2 env in
                      let x = freshName() in
                      ((fst r1)
                       @
@@ -84,17 +85,62 @@ let rec translateExp exp = match exp with
                       @
                       [IRC_Assign (x, IRC_Plus (snd r1, snd r2))],
                       x)
+  | Minus (e1, e2) -> let r1 = translateExp e1 env in
+                     let r2 = translateExp e2 env in
+                     let x = freshName() in
+                     ((fst r1)
+                      @
+                      (fst r2)
+                      @
+                      [IRC_Assign (x, IRC_Minus (snd r1, snd r2))],
+                      x)
+  | Times (e1, e2) -> let r1 = translateExp e1 env in
+                     let r2 = translateExp e2 env in
+                     let x = freshName() in
+                     ((fst r1)
+                      @
+                      (fst r2)
+                      @
+                      [IRC_Assign (x, IRC_Times (snd r1, snd r2))],
+                      x)
+  | Division (e1, e2) -> let r1 = translateExp e1 env in
+                     let r2 = translateExp e2 env in
+                     let x = freshName() in
+                     ((fst r1)
+                      @
+                      (fst r2)
+                      @
+                      [IRC_Assign (x, IRC_Division (snd r1, snd r2))],
+                      x)
   | IConst integer -> let x = freshName() in
                       ([IRC_Assign (x, IRC_IConst integer)],
                        x)
 
-let rec translateStmt stmt = match stmt with
-  | Decl (var, exp) -> let r1 = translateExp exp in
+let rec translateStmt stmt env = match stmt with
+  | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 in
+                          let r2 = translateStmt stmt2 in
+                          ((fst r1)
+                           @
+                           (fst r2),
+                           (snd r2))
+  | Decl (var, exp) -> let r1 = translateExp exp env in
+                       let x = freshName() in
                        ((fst r1)
                         @
-                        [(IRC_Assign (var, IRC_Var (snd r1)))],
-                        var)
+                        [IRC_Assign (x, IRC_Var (snd r1))],
+                        x)
+  | Assign (var, exp) -> let r1 = translateExp exp env in
+                         let x = freshName() in
+                         ((fst r1)
+                          @
+                          [IRC_Assign (x, IRC_Var (snd r1))],
+                          x)
+  | Print exp -> let r1 = translateExp exp env in
+                 ((fst r1)
+                  @
+                  [IRC_Print (IRC_Var (snd r1))],
+                  (snd r1))
 
-let translateProg prog = match prog with
-  | Prog (procs, main) -> translateStmt main
+let translateProg prog env = match prog with
+  | Prog (procs, main) -> translateStmt main env
 
