@@ -24,6 +24,25 @@ and irc_exp = IRC_And of string * string
             | IRC_IConst of int
             | IRC_Var of string
 
+and environ = Environ of (environ option * (string * string) list)
+
+(* environment lookup *)
+let rec lookup el lst = match lst with
+  | Environ (parentEnviron, currentEnviron) -> (try (snd (List.find (fun (el2,_) -> el = el2) currentEnviron)) with
+                                        | Not_found -> (match parentEnviron with
+                                                        | None -> failwith "variable not declared: " ^ el
+                                                        | Some env -> lookup el env))
+
+let lookupCurrentScope el lst = match lst with
+  | Environ (_, currentEnviron) -> (try (Some (snd (List.find (fun (el2,_) -> el = el2) currentEnviron))) with
+                            | Not_found -> None)
+
+let extendEnv env var1 type1 = match env with
+  | Environ (parentEnviron, currentEnviron) -> let result = lookupCurrentScope var1 env in
+                                       match result with
+                                       | Some _ -> failwith "redeclaration"
+                                       | None -> Environ (parentEnviron, (var1, type1)::currentEnviron)
+
 let nameSupply = ref 1
 let freshName _ =  nameSupply := !nameSupply + 1;
                    String.concat "" ["temp" ; string_of_int (!nameSupply )]
@@ -56,7 +75,6 @@ let rec translateB exp = match exp with
                        x = 0;             Booleans represented as integers
                        l2:
                      *)
-
                     let r1 = translateB e1 in
                     let r2 = translateB e2 in
                     let x = freshName() in
@@ -119,48 +137,50 @@ let rec translateExp exp env = match exp with
   | IConst integer -> let x = freshName() in
                       ([IRC_Assign (x, IRC_IConst integer)],
                        x)
+  | Var varName -> let x = lookup varName env in
+                   ([], x)
 
 let rec translateStmt stmt env = match stmt with
   | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 env in
-                          let r2 = translateStmt stmt2 env in
+                          let r2 = translateStmt stmt2 (snd r1) in
                           ((fst r1)
                            @
                            (fst r2),
                            (snd r2))
   | Decl (var, exp) -> let r1 = translateExp exp env in
                        let x = freshName() in
+                       let newEnv = extendEnv env var x in
                        ((fst r1)
                         @
                         [IRC_Assign (x, IRC_Var (snd r1))],
-                        x)
+                        newEnv)
   | Assign (var, exp) -> let r1 = translateExp exp env in
-                         let x = freshName() in
+                         let x = lookup var env in
                          ((fst r1)
                           @
                           [IRC_Assign (x, IRC_Var (snd r1))],
-                          x)
+                          env)
   | Print exp -> let r1 = translateExp exp env in
                  ((fst r1)
                   @
                   [IRC_Print (IRC_Var (snd r1))],
-                  (snd r1))
+                  env)
   | While (exp1, stmt1) -> let l1 = freshLabel() in
                            let l2 = freshLabel() in
                            let r1 = translateB exp1 in
-                           let r2 = translateStmt stmt1 env in
+                           let r2 = translateStmt stmt1 (Environ (Some env, [])) in
                            ([IRC_Label l1]
                             @
                             (fst r1)
                             @
-                            [IRC_ZeroJump ((snd r1), stmtLen)]
+                            [IRC_ZeroJump ((snd r1), l2)]
                             @
                             (fst r2)
                             @
                             [IRC_Goto l1]
                             @
                             [IRC_Label l2],
-                            "")
-  | Skip -> ([],"")
+                            env)
 
 let translateProg prog env = match prog with
   | Prog (procs, main) -> translateStmt main env

@@ -1,6 +1,6 @@
 {
     x := 1 - 4 * 4 / 2;
-    print 1;
+    print x;
     x = 1;
-    print 10
+    print x
 }
