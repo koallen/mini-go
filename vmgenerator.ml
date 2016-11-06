@@ -28,8 +28,12 @@ let rec translateIRCExp exp = match exp with
                              [PushToStack loc1; PushToStack loc2; Div]
   | IRC_Var var -> let loc = getLoc var in
                    [PushToStack loc]
-  (*| IRC_Not var -> let loc = getLoc var in*)
-                   (*[PushToStack loc]*)
+  | IRC_Eq (var1, var2) -> let loc1 = getLoc var1 in
+                           let loc2 = getLoc var2 in
+                           [PushToStack loc1; PushToStack loc2; Eq]
+  | IRC_Gt (var1, var2) -> let loc1 = getLoc var1 in
+                           let loc2 = getLoc var2 in
+                           [PushToStack loc1; PushToStack loc2; Gt]
 
 let rec translateCmd ir_list currentCmd = match ir_list with
   | irc::remainingIrc -> (match irc with

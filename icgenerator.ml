@@ -60,7 +60,7 @@ let irc_ZeroJump (x,l) = let y = freshName() in
 (* (parts) of translation of Booleans (short-circuit evaluation!),
    yields a tuple where first component represents the IRC and
    second component a variable name which is bound to the result *)
-let rec translateB exp = match exp with
+let rec translateB exp env = match exp with
   | BConst true -> let x = freshName() in
                    ([IRC_Assign (x, IRC_IConst 1)], x)
   | BConst false -> let x = freshName() in
@@ -75,8 +75,8 @@ let rec translateB exp = match exp with
                        x = 0;             Booleans represented as integers
                        l2:
                      *)
-                    let r1 = translateB e1 in
-                    let r2 = translateB e2 in
+                    let r1 = translateExp e1 env in
+                    let r2 = translateExp e2 env in
                     let x = freshName() in
                     let l1 = freshLabel() in
                     let l2 = freshLabel() in
@@ -93,11 +93,16 @@ let rec translateB exp = match exp with
                       IRC_Assign (x, IRC_IConst 0);
                       IRC_Label l2],
                      x)
-  (*| Not exp -> let r1 = translateB exp in*)
-               (*let x = freshName() in*)
-               (*let *)
+  | Not exp -> let r1 = translateExp exp env in
+               let x = freshName() in
+               let y = freshName() in
+               ((fst r1)
+                @
+                [IRC_Assign (y, IRC_IConst 1);
+                 IRC_Assign (x, IRC_Minus (y, (snd r1)))],
+                x)
 
-let rec translateExp exp env = match exp with
+and translateExp exp env = match exp with
   | Plus (e1, e2) -> let r1 = translateExp e1 env in
                      let r2 = translateExp e2 env in
                      let x = freshName() in
@@ -139,7 +144,25 @@ let rec translateExp exp env = match exp with
                        x)
   | Var varName -> let x = lookup varName env in
                    ([], x)
-  | _ -> translateB exp
+  | Eq (exp1, exp2) -> let r1 = translateExp exp1 env in
+                       let r2 = translateExp exp2 env in
+                       let x = freshName() in
+                       ((fst r1)
+                        @
+                        (fst r2)
+                        @
+                        [IRC_Assign (x, IRC_Eq (snd r1, snd r2))],
+                        x)
+  | Gt (exp1, exp2) -> let r1 = translateExp exp1 env in
+                       let r2 = translateExp exp2 env in
+                       let x = freshName() in
+                       ((fst r1)
+                        @
+                        (fst r2)
+                        @
+                        [IRC_Assign (x, IRC_Gt (snd r1, snd r2))],
+                        x)
+  | _ -> translateB exp env
 
 let rec translateStmt stmt env = match stmt with
   | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 env in
