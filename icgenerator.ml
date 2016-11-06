@@ -182,6 +182,23 @@ let rec translateStmt stmt env = match stmt with
                             @
                             [IRC_Label l2],
                             env)
+  | ITE (exp1, stmt1, stmt2) -> let l1 = freshLabel() in
+                                let l2 = freshLabel() in
+                                let r1 = translateExp exp1 env in
+                                let r2 = translateStmt stmt1 (Environ (Some env, [])) in
+                                let r3 = translateStmt stmt2 (Environ (Some env, [])) in
+                                ((fst r1)
+                                 @
+                                 [IRC_ZeroJump ((snd r1), l2)]
+                                 @
+                                 (fst r2)
+                                 @
+                                 [IRC_Goto l1; IRC_Label l2]
+                                 @
+                                 (fst r3)
+                                 @
+                                 [IRC_Label l1],
+                                 env)
 
 let translateProg prog env = match prog with
   | Prog (procs, main) -> translateStmt main env
