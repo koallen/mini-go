@@ -17,9 +17,9 @@ let _ =
     let prog = Parser.prog Lexer.token lexbuf in
     if Checker.typeCheckProgram prog then
         (*(Printf.printf "%s\n" (string_of_prog prog);*)
-        (let translatedProg = Icgenerator.translateProg prog in
+        (let translatedProg = Icgenerator.translateProg prog [] in
         (match translatedProg with
-        | (code, place) -> let vmCode = Vmgenerator.translateCmd code [] in
+        | (code, place) -> let vmCode = Vmgenerator.translateCmd code [] [] in
         Vm.run (vmCode@[Halt])))
     else
         failwith "Type error!";

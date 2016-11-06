@@ -6,6 +6,7 @@ and irc_cmd = IRC_Assign of string * irc_exp
             | IRC_Label of int
             | IRC_Goto of int
             | IRC_NonzeroJump of string * int  (* if x L = if x non-zero then jump to L *)
+            | IRC_ZeroJump of string * int
             | IRC_Param of string
             | IRC_Call of int * int (* (label, number of parameters *)
             | IRC_Print of irc_exp
@@ -25,7 +26,7 @@ and irc_exp = IRC_And of string * string
 
 let nameSupply = ref 1
 let freshName _ =  nameSupply := !nameSupply + 1;
-                   String.concat "" ["temp" ; string_of_int (!nameSupply )] 
+                   String.concat "" ["temp" ; string_of_int (!nameSupply )]
 
 let labelSupply = ref 1
 let freshLabel _ =  labelSupply := !labelSupply + 1;
@@ -63,7 +64,7 @@ let rec translateB exp = match exp with
                     let l2 = freshLabel() in
                     ((fst r1)
                      @
-                     (irc_ZeroJump (snd r1,l1))
+                     [IRC_ZeroJump (snd r1,l1)]
                      @
                      (fst r2)
                      @
@@ -74,6 +75,9 @@ let rec translateB exp = match exp with
                       IRC_Assign (x, IRC_IConst 0);
                       IRC_Label l2],
                      x)
+  (*| Not exp -> let r1 = translateB exp in*)
+               (*let x = freshName() in*)
+               (*let *)
 
 let rec translateExp exp env = match exp with
   | Plus (e1, e2) -> let r1 = translateExp e1 env in
@@ -117,8 +121,8 @@ let rec translateExp exp env = match exp with
                        x)
 
 let rec translateStmt stmt env = match stmt with
-  | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 in
-                          let r2 = translateStmt stmt2 in
+  | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 env in
+                          let r2 = translateStmt stmt2 env in
                           ((fst r1)
                            @
                            (fst r2),
@@ -140,7 +144,23 @@ let rec translateStmt stmt env = match stmt with
                   @
                   [IRC_Print (IRC_Var (snd r1))],
                   (snd r1))
+  | While (exp1, stmt1) -> let l1 = freshLabel() in
+                           let l2 = freshLabel() in
+                           let r1 = translateB exp1 in
+                           let r2 = translateStmt stmt1 env in
+                           ([IRC_Label l1]
+                            @
+                            (fst r1)
+                            @
+                            [IRC_ZeroJump ((snd r1), stmtLen)]
+                            @
+                            (fst r2)
+                            @
+                            [IRC_Goto l1]
+                            @
+                            [IRC_Label l2],
+                            "")
+  | Skip -> ([],"")
 
 let translateProg prog env = match prog with
   | Prog (procs, main) -> translateStmt main env
-
