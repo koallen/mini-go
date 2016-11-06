@@ -25,6 +25,7 @@ type instructions =
                   | NonZero of int
                   | Zero of int
                   | Jump of int
+                  | Label of int
 
                   (* Memory operations *)
 
@@ -57,7 +58,6 @@ type state = { mem : int array;
                memLock : lockInfo array;
                threads : (thread list) ref;
                activeThread : int ref}
-               
 
 let nameSupply = ref 1
 let fresh _ =  nameSupply := !nameSupply + 1;
@@ -174,6 +174,9 @@ let singleStep id mem memLock t = match (List.nth t.code !(t.pc)) with
 
   | Jump i -> t.pc := i;
               false
+
+  | Label i -> inc t.pc;
+               false
  
   | Assign (loc,i) -> inc t.pc;
                       mem.(loc) <- i;

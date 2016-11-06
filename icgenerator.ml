@@ -139,6 +139,7 @@ let rec translateExp exp env = match exp with
                        x)
   | Var varName -> let x = lookup varName env in
                    ([], x)
+  | _ -> translateB exp
 
 let rec translateStmt stmt env = match stmt with
   | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 env in
@@ -167,7 +168,7 @@ let rec translateStmt stmt env = match stmt with
                   env)
   | While (exp1, stmt1) -> let l1 = freshLabel() in
                            let l2 = freshLabel() in
-                           let r1 = translateB exp1 in
+                           let r1 = translateExp exp1 env in
                            let r2 = translateStmt stmt1 (Environ (Some env, [])) in
                            ([IRC_Label l1]
                             @

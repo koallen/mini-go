@@ -31,29 +31,47 @@ let rec translateIRCExp exp = match exp with
   (*| IRC_Not var -> let loc = getLoc var in*)
                    (*[PushToStack loc]*)
 
-let rec translateCmd ir_list currentCmd labelEnv = match ir_list with
+let rec translateCmd ir_list currentCmd = match ir_list with
   | irc::remainingIrc -> (match irc with
                           | IRC_Assign (var, exp) -> let e1 = translateIRCExp exp in
                                                      let x = getLoc var in
                                                      let cmd = currentCmd @ e1 @ [AssignFromStack (1, x); PopS] in
-                                                     translateCmd remainingIrc cmd labelEnv
+                                                     translateCmd remainingIrc cmd
                           | IRC_Print exp -> let e1 = translateIRCExp exp in
                                                      let cmd = currentCmd @ e1 @ [Output; PopS] in
-                                                     translateCmd remainingIrc cmd labelEnv
-                          | IRC_Label label -> let newLabelEnv = (string_of_int label, (List.length currentCmd))::labelEnv in
-                                               printLabels newLabelEnv;
-                                               translateCmd remainingIrc currentCmd newLabelEnv
-                          | IRC_NonzeroJump (result, label) -> let position = lookup (string_of_int label) labelEnv in
-                                                               let x = getLoc result in
-                                                               let cmd = currentCmd @ [PushToStack x; NonZero position] in
-                                                               translateCmd remainingIrc cmd labelEnv
-                          | IRC_ZeroJump (result, label) -> printLabels labelEnv;
-                                                            Printf.printf "%d\n" label;
-                                                            let position = lookup (string_of_int label) labelEnv in
-                                                            let x = getLoc result in
-                                                            let cmd = currentCmd @ [PushToStack x; Zero position] in
-                                                            translateCmd remainingIrc currentCmd labelEnv
-                          | IRC_Goto label -> let position = lookup (string_of_int label) labelEnv in
-                                              let cmd = currentCmd @ [Jump position] in
-                                              translateCmd remainingIrc currentCmd labelEnv)
+                                                     translateCmd remainingIrc cmd
+                          | IRC_Label label -> let cmd = currentCmd @ [Label label] in
+                                               translateCmd remainingIrc cmd
+                          | IRC_NonzeroJump (result, label) -> let x = getLoc result in
+                                                               let cmd = currentCmd @ [PushToStack x; NonZero label] in
+                                                               translateCmd remainingIrc cmd
+                          | IRC_ZeroJump (result, label) -> let x = getLoc result in
+                                                            let cmd = currentCmd @ [PushToStack x; Zero label] in
+                                                            translateCmd remainingIrc cmd
+                          | IRC_Goto label -> let cmd = currentCmd @ [Jump label] in
+                                              translateCmd remainingIrc cmd)
   | [] -> currentCmd
+
+let rec findLabel originalCmd label position = match originalCmd with
+  | x::xs -> (match x with
+              | Label l -> if (l == label) then (position + 1)
+                           else findLabel xs label (position+1)
+              | _ -> findLabel xs label (position+1))
+  | [] -> -1
+
+let rec updateJumps cmd newCmd originalCmd = match cmd with
+  | x::xs -> (match x with
+              | NonZero label -> let location = findLabel originalCmd label 0 in
+                                 updateJumps xs (newCmd @ [NonZero location]) originalCmd
+              | Zero label -> let location = findLabel originalCmd label 0 in
+                              updateJumps xs (newCmd @ [Zero location]) originalCmd
+              | Jump label -> let location = findLabel originalCmd label 0 in
+                              updateJumps xs (newCmd @ [Jump location]) originalCmd
+              | _ -> updateJumps xs (newCmd @ [x]) originalCmd)
+  | [] -> newCmd
+
+let rec prettyPrint cmd = match cmd with
+  | x::xs -> (match x with
+              | Label l -> Printf.printf "Label %d" l
+              | _ -> Printf.printf "...\n")
+  | [] -> Printf.printf "\n"

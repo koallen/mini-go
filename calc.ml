@@ -12,24 +12,33 @@ let file_to_string filename =
 
 let _ =
   try
+    (*Printf.printf "Starting\n";*)
     let source = file_to_string Sys.argv.(1) in
+    (*Printf.printf "Program compiling\n";*)
     let lexbuf = Lexing.from_string source in
+    (*Printf.printf "Lexed\n";*)
     let prog = Parser.prog Lexer.token lexbuf in
-    if Checker.typeCheckProgram prog then
-        (*(Printf.printf "%s\n" (string_of_prog prog);*)
-        (let translatedProg = Icgenerator.translateProg prog (Environ (None, [])) in
+    (*Printf.printf "Parsed\n";*)
+    if Checker.typeCheckProgram prog then (
+        (*Printf.printf "Type checked\n";*)
+        let translatedProg = Icgenerator.translateProg prog (Environ (None, [])) in
+        (*Printf.printf "IRC generated\n";*)
         (match translatedProg with
-        | (code, place) -> let vmCode = Vmgenerator.translateCmd code [] [] in
-        Vm.run (vmCode@[Halt])))
+        | (code, _) -> let vmCode = Vmgenerator.translateCmd code [] in
+                       let vmCodeHalt = vmCode @ [Halt] in
+                       (*Vmgenerator.prettyPrint vmCodeHalt;*)
+                       let updatedVmCode = Vmgenerator.updateJumps vmCodeHalt [] vmCodeHalt in
+                       Vm.run updatedVmCode)
+    )
     else
         failwith "Type error!";
     flush stdout
   with Parsing.Parse_error ->
       Printf.printf "%s" "Syntax error!\n";
-  | Invalid_argument error_message ->
-      Printf.printf "%s" "Usage: ./calc main.go\n";
-      Printf.printf "%s" error_message;
-      exit 0
+  (*| Invalid_argument error_message ->*)
+      (*Printf.printf "%s" "Usage: ./calc main.go\n";*)
+      (*Printf.printf "%s" error_message;*)
+      (*exit 0*)
   | Failure error_message ->
           Printf.printf "%s" error_message;
 
