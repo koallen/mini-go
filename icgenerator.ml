@@ -13,14 +13,12 @@ and irc_cmd = IRC_Assign of string * irc_exp
             | IRC_Return of string
             | IRC_Get of string
 
-and irc_exp = IRC_And of string * string
-            | IRC_Eq of string * string
+and irc_exp = IRC_Eq of string * string
             | IRC_Gt of string * string
             | IRC_Plus of string * string
             | IRC_Minus of string * string
             | IRC_Times of string * string
             | IRC_Division of string * string
-            | IRC_Not of string
             | IRC_IConst of int
             | IRC_Var of string
 
@@ -50,12 +48,6 @@ let freshName _ =  nameSupply := !nameSupply + 1;
 let labelSupply = ref 1
 let freshLabel _ =  labelSupply := !labelSupply + 1;
                     !labelSupply
-
-(* short-hand for 'zero' jump *)
-let irc_ZeroJump (x,l) = let y = freshName() in
-                         [IRC_Assign (y, IRC_Not x);
-                          IRC_NonzeroJump (y,l)]
-
 
 (* (parts) of translation of Booleans (short-circuit evaluation!),
    yields a tuple where first component represents the IRC and
