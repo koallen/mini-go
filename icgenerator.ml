@@ -1,6 +1,6 @@
 open Ast
 
-type irc = IRC of (irc_cmd list)
+type irc = IRC of (irc_proc list)
 
 and irc_cmd = IRC_Assign of string * irc_exp
             | IRC_Label of int
@@ -22,7 +22,13 @@ and irc_exp = IRC_Eq of string * string
             | IRC_IConst of int
             | IRC_Var of string
 
+and irc_proc = IRC_Proc of irc_cmd list * string list
+
 and environ = Environ of (environ option * (string * string) list)
+
+let rec prettyPrint cmd = match cmd with
+  | x::xs -> Printf.printf "%s " x; prettyPrint xs
+  | [] -> Printf.printf "\n"
 
 (* environment lookup *)
 let rec lookup el lst = match lst with
@@ -44,6 +50,10 @@ let extendEnv env var1 type1 = match env with
 let nameSupply = ref 1
 let freshName _ =  nameSupply := !nameSupply + 1;
                    String.concat "" ["temp" ; string_of_int (!nameSupply )]
+
+let varSupply = ref 1
+let freshVar _ =  nameSupply := !nameSupply + 1;
+                   String.concat "" ["var" ; string_of_int (!nameSupply )]
 
 let labelSupply = ref 1
 let freshLabel _ =  labelSupply := !labelSupply + 1;
@@ -135,6 +145,7 @@ and translateExp exp env = match exp with
                       ([IRC_Assign (x, IRC_IConst integer)],
                        x)
   | Var varName -> let x = lookup varName env in
+                   (*Printf.printf "%s" x;*)
                    ([], x)
   | Eq (exp1, exp2) -> let r1 = translateExp exp1 env in
                        let r2 = translateExp exp2 env in
@@ -156,35 +167,42 @@ and translateExp exp env = match exp with
                         x)
   | _ -> translateB exp env
 
-let rec translateStmt stmt env = match stmt with
-  | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 env in
-                          let r2 = translateStmt stmt2 (snd r1) in
+let rec translateStmt stmt env locals = match stmt with
+  | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 env locals in
+                          let r2 = translateStmt stmt2 (fst (snd r1)) (snd (snd r1)) in
+                          (*prettyPrint locals;*)
+                          (*prettyPrint (snd (snd r2));*)
                           ((fst r1)
                            @
                            (fst r2),
-                           (snd r2))
+                           (snd r2)
+                           )
   | Decl (var, exp) -> let r1 = translateExp exp env in
-                       let x = freshName() in
+                       let x = freshVar() in
                        let newEnv = extendEnv env var x in
+                       let newLocal = x::locals in
                        ((fst r1)
                         @
                         [IRC_Assign (x, IRC_Var (snd r1))],
-                        newEnv)
+                        (newEnv,
+                        newLocal))
   | Assign (var, exp) -> let r1 = translateExp exp env in
                          let x = lookup var env in
                          ((fst r1)
                           @
                           [IRC_Assign (x, IRC_Var (snd r1))],
-                          env)
+                          (env,
+                          locals))
   | Print exp -> let r1 = translateExp exp env in
                  ((fst r1)
                   @
                   [IRC_Print (IRC_Var (snd r1))],
-                  env)
+                  (env, locals))
   | While (exp1, stmt1) -> let l1 = freshLabel() in
                            let l2 = freshLabel() in
                            let r1 = translateExp exp1 env in
-                           let r2 = translateStmt stmt1 (Environ (Some env, [])) in
+                           let r2 = translateStmt stmt1 (Environ (Some env, [])) locals in
+                           Printf.printf "%s" (snd r1);
                            ([IRC_Label l1]
                             @
                             (fst r1)
@@ -196,12 +214,12 @@ let rec translateStmt stmt env = match stmt with
                             [IRC_Goto l1]
                             @
                             [IRC_Label l2],
-                            env)
+                            (env, locals))
   | ITE (exp1, stmt1, stmt2) -> let l1 = freshLabel() in
                                 let l2 = freshLabel() in
                                 let r1 = translateExp exp1 env in
-                                let r2 = translateStmt stmt1 (Environ (Some env, [])) in
-                                let r3 = translateStmt stmt2 (Environ (Some env, [])) in
+                                let r2 = translateStmt stmt1 (Environ (Some env, [])) locals in
+                                let r3 = translateStmt stmt2 (Environ (Some env, [])) locals in
                                 ((fst r1)
                                  @
                                  [IRC_ZeroJump ((snd r1), l2)]
@@ -213,7 +231,7 @@ let rec translateStmt stmt env = match stmt with
                                  (fst r3)
                                  @
                                  [IRC_Label l1],
-                                 env)
+                                 (env, locals))
 
-let translateProg prog env = match prog with
-  | Prog (procs, main) -> translateStmt main env
+let translateProg prog = match prog with
+  | Prog (procs, main) -> translateStmt main (Environ(None, [])) []

@@ -21,12 +21,11 @@ let _ =
     (*Printf.printf "Parsed\n";*)
     if Checker.typeCheckProgram prog then (
         (*Printf.printf "Type checked\n";*)
-        let translatedProg = Icgenerator.translateProg prog (Environ (None, [])) in
+        let translatedProg = Icgenerator.translateProg prog in
         (*Printf.printf "IRC generated\n";*)
         (match translatedProg with
-        | (code, _) -> let vmCode = Vmgenerator.translateCmd code [] in
+        | (code, (env, locals)) -> let vmCode = Vmgenerator.translateCmd code [] locals in
                        let vmCodeHalt = vmCode @ [Halt] in
-                       (*Vmgenerator.prettyPrint vmCodeHalt;*)
                        let updatedVmCode = Vmgenerator.updateJumps vmCodeHalt [] vmCodeHalt in
                        Vm.run updatedVmCode)
     )
@@ -40,7 +39,7 @@ let _ =
       (*Printf.printf "%s" error_message;*)
       (*exit 0*)
   | Failure error_message ->
-          Printf.printf "%s" error_message;
+          Printf.printf "%s\n" error_message;
 
 
         (*Icgenerator.translateProg (Normalization.normalizeProg prog))*)

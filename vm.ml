@@ -42,6 +42,7 @@ type instructions =
                   | PopE
                   | PushToEnv of int
                   | AssignFromEnv of int*int
+                  | UpdateToEnv of int*int  
                                 
 type lockInfo = { locked : bool;
                   threadID : int }                             
@@ -226,6 +227,9 @@ let singleStep id mem memLock t = match (List.nth t.code !(t.pc)) with
   | AssignFromEnv (relPos,loc) -> inc t.pc;
                                   mem.(loc) <- t.env.(!(t.ep) - relPos);
                                   false              
+  | UpdateToEnv (relPos,loc) -> inc t.pc;
+                                t.env.(!(t.ep) - relPos) <- mem.(loc);
+                                false
                        
 let debug txt = Printf.printf txt;
                 Printf.printf "\n"
