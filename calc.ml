@@ -1,6 +1,7 @@
 (* File calc.ml *)
 open Ast
 open Vm
+open Icgenerator
 
 let file_to_string filename =
     let ic = open_in filename in
@@ -20,12 +21,11 @@ let _ =
     let prog = Parser.prog Lexer.token lexbuf in
     (*Printf.printf "Parsed\n";*)
     if Checker.typeCheckProgram prog then (
-        (*Printf.printf "Type checked\n";*)
         let translatedProg = Icgenerator.translateProg prog in
-        (*Printf.printf "IRC generated\n";*)
         (match translatedProg with
-        | (code, (env, locals)) -> let vmCode = Vmgenerator.translateCmd code [] locals in
-                       let vmCodeHalt = vmCode @ [Halt] in
+        | IRC procs -> let vmCode = List.map (fun x -> match x with
+                                                       | IRC_Proc (cmds, locals) -> Vmgenerator.translateCmd cmds [] locals) procs in
+                       let vmCodeHalt = (List.concat vmCode) @ [Halt] in
                        let updatedVmCode = Vmgenerator.updateJumps vmCodeHalt [] vmCodeHalt in
                        Vm.run updatedVmCode)
     )

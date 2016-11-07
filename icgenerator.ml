@@ -232,6 +232,34 @@ let rec translateStmt stmt env locals = match stmt with
                                  @
                                  [IRC_Label l1],
                                  (env, locals))
+  | FuncCall (funcName, args) -> let r1 = List.map (fun x -> translateExp x env) args in
+                                 let r2 = List.concat (List.map fst r1) in
+                                 let r3 = List.map (fun x -> IRC_Param (snd x)) r1 in
+                                 let l1 = int_of_string (lookup funcName env) in
+                                 (r2
+                                  @
+                                  r3
+                                  @
+                                  [IRC_Call (l1, List.length r1)],
+                                  (env, locals))
+
+let rec collectLabels procs labels = match procs with
+  | x::xs -> (match x with
+              | Proc (name, _, _, _) -> let l1 = freshLabel() in
+                                        collectLabels xs ((name, string_of_int l1)::labels))
+  | [] -> Environ(None, labels)
+
+let rec translateProc procs env irc_procs = match procs with
+  | x::xs -> (match x with
+              | Proc (name, params, retTy, body) -> let r1 = translateStmt body env (List.rev (List.map (fun x -> match x with
+                                                                                                                 | (Var name, _) -> name) params)) in
+                                                    let l1 = lookup name env in
+                                                    let irc_proc = IRC_Proc ((fst r1), (snd (snd r1))) in
+                                                    translateProc xs env irc_procs@[irc_proc])
+  | [] -> irc_procs
 
 let translateProg prog = match prog with
-  | Prog (procs, main) -> translateStmt main (Environ(None, [])) []
+  | Prog (procs, main) -> let funcLabels = collectLabels procs [] in
+                          let translatedProcs = translateProc procs funcLabels [] in
+                          let translatedMain = translateStmt main funcLabels [] in
+                          IRC (translatedProcs @ [IRC_Proc ((fst translatedMain), (snd (snd translatedMain)))])

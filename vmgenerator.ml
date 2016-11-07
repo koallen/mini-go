@@ -89,7 +89,12 @@ let rec translateCmd ir_list currentCmd locals = match ir_list with
                                                          (let cmd = currentCmd @ [PushToStack x; Zero label] in
                                                           translateCmd remainingIrc cmd locals)
                           | IRC_Goto label -> let cmd = currentCmd @ [Jump label] in
-                                              translateCmd remainingIrc cmd locals)
+                                              translateCmd remainingIrc cmd locals
+                          | IRC_Param var -> let x = getLocAss var locals in
+                                             let cmd = currentCmd @ [PushToEnv x] in
+                                             translateCmd remainingIrc cmd locals
+                          | IRC_Call (label, num_of_params) -> let cmd = currentCmd @ [Jump label] in
+                                                               translateCmd remainingIrc cmd locals)
   | [] -> (pushToEnv locals []) @ currentCmd
 
 let rec findLabel originalCmd label position = match originalCmd with
