@@ -8,7 +8,19 @@ func max(a int, b int) int {
     return x
 }
 
+func fac(n int) int {
+    result := 0;
+    if n > 0 {
+        result = n * fac(n - 1)
+    } else {
+        result = 1
+    };
+    return result
+}
+
 {
     x := max(10, 100);
-    print x
+    print x;
+    y := fac(7);
+    print y
 }
