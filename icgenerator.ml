@@ -165,13 +165,22 @@ and translateExp exp env = match exp with
                         @
                         [IRC_Assign (x, IRC_Gt (snd r1, snd r2))],
                         x)
+  | FuncExp (funcName, args) -> let r1 = List.map (fun x -> translateExp x env) args in
+                                 let r2 = List.concat (List.map fst r1) in
+                                 let r3 = List.map (fun x -> IRC_Param (snd x)) r1 in
+                                 let l1 = int_of_string (lookup funcName env) in
+                                 let x = freshName() in
+                                 (r2
+                                  @
+                                  r3
+                                  @
+                                  [IRC_Call (l1, List.length r1); IRC_Get x],
+                                  x)
   | _ -> translateB exp env
 
 let rec translateStmt stmt env locals = match stmt with
   | Seq (stmt1, stmt2) -> let r1 = translateStmt stmt1 env locals in
                           let r2 = translateStmt stmt2 (fst (snd r1)) (snd (snd r1)) in
-                          (*prettyPrint locals;*)
-                          (*prettyPrint (snd (snd r2));*)
                           ((fst r1)
                            @
                            (fst r2),
@@ -236,13 +245,17 @@ let rec translateStmt stmt env locals = match stmt with
                                  let r2 = List.concat (List.map fst r1) in
                                  let r3 = List.map (fun x -> IRC_Param (snd x)) r1 in
                                  let l1 = int_of_string (lookup funcName env) in
-                                 (*Printf.printf "Func has label: %d\n" l1;*)
                                  (r2
                                   @
                                   r3
                                   @
                                   [IRC_Call (l1, List.length r1)],
                                   (env, locals))
+  | Return exp -> let r1 = translateExp exp env in
+                  ((fst r1)
+                   @
+                   [IRC_Return (snd r1)],
+                   (env, locals))
 
 let rec collectLabels procs labels = match procs with
   | x::xs -> (match x with
@@ -281,4 +294,5 @@ let translateProg prog = match prog with
   | Prog (procs, main) -> let funcLabels = collectLabels procs [] in
                           let translatedProcs = translateProc procs funcLabels [] in
                           let translatedMain = translateStmt main funcLabels [] in
+                          (*Printf.printf "Main local length: %d" (List.length (snd (snd translatedMain)));*)
                           IRC (translatedProcs, IRC_Proc ((fst translatedMain), (snd (snd translatedMain)), 0))
