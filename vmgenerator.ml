@@ -33,10 +33,6 @@ let rec printLabels labelEnv = match labelEnv with
                                                     printLabels remainingLabels)
     | [] -> Printf.printf ""
 
-let rec pushToEnv locals vms = match locals with
-  | x::xs -> pushToEnv xs [PushE 0]@vms
-  | [] -> vms
-
 let rec translateIRCExp exp locals = match exp with
   | IRC_IConst integer -> [PushS integer]
   | IRC_Plus (var1, var2) -> let loc1 = getLoc var1 locals in
@@ -93,9 +89,49 @@ let rec translateCmd ir_list currentCmd locals = match ir_list with
                           | IRC_Param var -> let x = getLocAss var locals in
                                              let cmd = currentCmd @ [PushToEnv x] in
                                              translateCmd remainingIrc cmd locals
-                          | IRC_Call (label, num_of_params) -> let cmd = currentCmd @ [Jump label] in
+                          | IRC_Call (label, num_of_params) -> let address = (List.length currentCmd) + 2 in
+                                                               let cmd = currentCmd @ [PushE address; Jump label] in
                                                                translateCmd remainingIrc cmd locals)
-  | [] -> (pushToEnv locals []) @ currentCmd
+  | [] -> currentCmd
+
+let rec addPushCommands num_of_locals cmds = match num_of_locals with
+  | 0 -> cmds
+  | _ -> addPushCommands (num_of_locals - 1) cmds@[PushE 0]
+
+let rec addPopCommands num_of_locals cmds = match num_of_locals with
+  | 0 -> cmds
+  | _ -> addPopCommands (num_of_locals - 1) cmds@[PopE]
+
+let rec appendToLocals old_locals new_locals num_of_locals = match num_of_locals with
+  | 0 -> (match old_locals with
+          | x::xs -> new_locals @ ["__returnaddress"] @ [x] @ xs)
+  | _ -> (match old_locals with
+          | x::xs -> appendToLocals old_locals (new_locals@[x]) (num_of_locals - 1))
+
+let translateFunc proc currentCmd = match proc with
+  | IRC_Proc (irc, locals, num_of_params) -> let num_of_locals = (List.length locals) - num_of_params in
+                                             let pushLocalCode = addPushCommands num_of_locals [] in
+                                             let new_locals = appendToLocals locals [] num_of_locals in
+                                             let cmd = translateCmd irc currentCmd new_locals in
+                                             let returnAddrCode = [AssignFromEnv(1, 1)] in
+                                             let popLocalCode = addPopCommands (List.length new_locals) [] in
+                                             (*Printf.printf "Num of new locals: %d\n" (List.length new_locals);*)
+                                             (*Vm.printVMList returnAddrCode 0;*)
+                                             (*Vm.printVMList popLocalCode 0;*)
+                                             (*Printf.printf "Num of locals: %d\n" num_of_locals;*)
+                                             (*Printf.printf "Nuuuum of locals: %d\n" (List.length locals);*)
+                                             (*Printf.printf "CMD length: %d" (List.length cmd);*)
+                                             pushLocalCode @ cmd @ returnAddrCode @ popLocalCode @ [JumpMemLoc 1]
+
+let rec translateAllFuncs mainCmd procs = match procs with
+  | x::xs -> let cmd = translateFunc x mainCmd in
+             translateAllFuncs cmd xs
+  | [] -> mainCmd
+
+let translateMain proc = match proc with
+  | IRC_Proc (irc, locals, _) -> let pushLocalCode = addPushCommands (List.length locals) [] in
+                                 let cmd = translateCmd irc [] locals in
+                                 pushLocalCode @ cmd
 
 let rec findLabel originalCmd label position = match originalCmd with
   | x::xs -> (match x with

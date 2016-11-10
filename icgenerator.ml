@@ -1,6 +1,6 @@
 open Ast
 
-type irc = IRC of (irc_proc list)
+type irc = IRC of irc_proc list * irc_proc
 
 and irc_cmd = IRC_Assign of string * irc_exp
             | IRC_Label of int
@@ -22,7 +22,7 @@ and irc_exp = IRC_Eq of string * string
             | IRC_IConst of int
             | IRC_Var of string
 
-and irc_proc = IRC_Proc of irc_cmd list * string list
+and irc_proc = IRC_Proc of irc_cmd list * string list * int
 
 and environ = Environ of (environ option * (string * string) list)
 
@@ -236,6 +236,7 @@ let rec translateStmt stmt env locals = match stmt with
                                  let r2 = List.concat (List.map fst r1) in
                                  let r3 = List.map (fun x -> IRC_Param (snd x)) r1 in
                                  let l1 = int_of_string (lookup funcName env) in
+                                 (*Printf.printf "Func has label: %d\n" l1;*)
                                  (r2
                                   @
                                   r3
@@ -249,12 +250,30 @@ let rec collectLabels procs labels = match procs with
                                         collectLabels xs ((name, string_of_int l1)::labels))
   | [] -> Environ(None, labels)
 
+let rec addParamToEnv env params = match params with
+  | x::xs -> (match x with
+             | (exp, _) -> (match exp with
+                            | Var name -> let x = freshVar() in
+                                          let newEnv = extendEnv env name x in
+                                          addParamToEnv newEnv xs))
+  | [] -> env
+
+let rec addParamToLocal env locals params = match params with
+  | x::xs -> (match x with
+             | (exp, _) -> (match exp with
+                            | Var name -> let varName = lookup name env in
+                                          addParamToLocal env (varName::locals) xs))
+  | [] -> locals
+
 let rec translateProc procs env irc_procs = match procs with
   | x::xs -> (match x with
-              | Proc (name, params, retTy, body) -> let r1 = translateStmt body env (List.rev (List.map (fun x -> match x with
-                                                                                                                 | (Var name, _) -> name) params)) in
-                                                    let l1 = lookup name env in
-                                                    let irc_proc = IRC_Proc ((fst r1), (snd (snd r1))) in
+              | Proc (name, params, retTy, body) -> let newEnv = addParamToEnv env params in
+                                                    let locals = addParamToLocal newEnv [] params in
+                                                    let r1 = translateStmt body newEnv locals in
+                                                    let newLocals = (snd (snd r1)) in
+                                                    (*Printf.printf "nnnum of locals: %d\n" (List.length newLocals);*)
+                                                    let l1 = int_of_string (lookup name env) in
+                                                    let irc_proc = IRC_Proc ([IRC_Label l1]@(fst r1), (snd (snd r1)), List.length params) in
                                                     translateProc xs env irc_procs@[irc_proc])
   | [] -> irc_procs
 
@@ -262,4 +281,4 @@ let translateProg prog = match prog with
   | Prog (procs, main) -> let funcLabels = collectLabels procs [] in
                           let translatedProcs = translateProc procs funcLabels [] in
                           let translatedMain = translateStmt main funcLabels [] in
-                          IRC (translatedProcs @ [IRC_Proc ((fst translatedMain), (snd (snd translatedMain)))])
+                          IRC (translatedProcs, IRC_Proc ((fst translatedMain), (snd (snd translatedMain)), 0))

@@ -23,11 +23,12 @@ let _ =
     if Checker.typeCheckProgram prog then (
         let translatedProg = Icgenerator.translateProg prog in
         (match translatedProg with
-        | IRC procs -> let vmCode = List.map (fun x -> match x with
-                                                       | IRC_Proc (cmds, locals) -> Vmgenerator.translateCmd cmds [] locals) procs in
-                       let vmCodeHalt = (List.concat vmCode) @ [Halt] in
-                       let updatedVmCode = Vmgenerator.updateJumps vmCodeHalt [] vmCodeHalt in
-                       Vm.run updatedVmCode)
+        | IRC (procs, main) -> let mainVMCode = (Vmgenerator.translateMain main) @ [Halt] in
+                               let vmCodeHalt = Vmgenerator.translateAllFuncs mainVMCode procs in
+                               let updatedVmCode = Vmgenerator.updateJumps vmCodeHalt [] vmCodeHalt in
+                               (*Vm.printVMList updatedVmCode 0;*)
+                               Vm.run updatedVmCode
+        )
     )
     else
         failwith "Type error!";

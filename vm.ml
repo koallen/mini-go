@@ -26,6 +26,7 @@ type instructions =
                   | Zero of int
                   | Jump of int
                   | Label of int
+                  | JumpMemLoc of int 
 
                   (* Memory operations *)
 
@@ -178,6 +179,9 @@ let singleStep id mem memLock t = match (List.nth t.code !(t.pc)) with
 
   | Label i -> inc t.pc;
                false
+
+  | JumpMemLoc loc -> t.pc := mem.(loc);
+                      false 
  
   | Assign (loc,i) -> inc t.pc;
                       mem.(loc) <- i;
@@ -250,3 +254,41 @@ let testProg1 = [PushS 1; PushS 2; Add; Output; Halt]
 let testProg2 = [PushS 1; PushS 2; Lt; Output; Halt]                  
                           
 let getThread st i = (List.nth !(st.threads) i)
+
+let printVm vmInst = match vmInst with
+  | Halt -> "Halt"
+
+  | PushS num -> "PushS " ^ (string_of_int num)
+  | PopS -> "PopS"
+  | Add -> "Add"
+  | Sub -> "Sub"
+  | Mult -> "Mult"
+  | Div -> "Div"
+  | Lt -> "Lt"
+  | Gt -> "Gt"
+  | Eq -> "Eq"
+
+  | Output -> "Output"
+
+  | NonZero place -> "NonZero " ^ (string_of_int place)
+  | Zero place -> "Zero " ^ (string_of_int place)
+  | Jump place -> "Jump " ^ (string_of_int place)
+  | JumpMemLoc place -> "JumpMemLoc " ^ (string_of_int place)
+  | Label l -> "Label " ^ (string_of_int l)
+
+  | Assign (mem, num) -> "Assign " ^ (string_of_int mem) ^ " " ^ (string_of_int num)
+  | PushToStack mem -> "PushToStack " ^ (string_of_int mem)
+  | AssignFromStack (sp, mem) -> "AssignFromStack " ^ (string_of_int sp) ^ " " ^ (string_of_int mem)
+
+  | PushE num -> "PushE " ^ (string_of_int num)
+  | PopE -> "PopE"
+  | PushToEnv num -> "PushToEnv " ^ (string_of_int num)
+  | AssignFromEnv (sp, mem) -> "AssignFromEnv " ^ (string_of_int sp) ^ " " ^ (string_of_int mem)
+  | UpdateToEnv (sp, mem) -> "UpdateToEnv " ^ (string_of_int sp) ^ " " ^ (string_of_int mem)
+
+  | _ -> "Not Implemented"
+
+let rec printVMList vmList counter = match vmList with
+  | x::xs -> Printf.printf "Line %d: %s\n" counter (printVm x);
+             printVMList xs (counter + 1)
+  | [] -> debug ""
