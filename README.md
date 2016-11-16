@@ -4,7 +4,7 @@ CS4212 Compiler Design, AY 2016-17 Semester 1
 
 ## Group
         - Liu Siyuan (A0153030B)
-        - Francesco Picciotti
+        - Francesco Picciotti (A0153447A)
         - Yohanes Yudhi (A0152954Y)
 
 ## Description
