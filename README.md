@@ -15,7 +15,7 @@ This is a compiler for the mini GO language.
 
 - [x] Stage 1: Lexical and syntax analysis
 - [x] Stage 2: Type checking
-- [ ] Stage 3: Intermediate code generation
+- [x] Stage 3: Intermediate code generation
 
 ## Testing
 
