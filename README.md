@@ -10,6 +10,9 @@ CS4212 Compiler Design, AY 2016-17 Semester 1
 ## Description
 
 This is a compiler for the mini GO language.
+The compiler supports function calls assuming that if there's a return statement, it's the last instruction in the function body.
+Integer numbers are defined only as positive numbers. 
+Variable redeclarations in inner scopes are allowed and correctly implemented. Variables declared inside inner scopes in functions cannot be returned. Concurrency part not implemented yet.   
 
 ## Progress
 
