@@ -11,15 +11,12 @@ CS4212 Compiler Design, AY 2016-17 Semester 1
 ## Description
 
 This is a compiler for the mini GO language.
-The compiler supports function calls assuming that if there's a return statement, it's the last instruction in the function body.
-Integer numbers are defined only as positive numbers. 
-Variable redeclarations in inner scopes are allowed and correctly implemented. Variables declared inside inner scopes in functions cannot be returned. Concurrency part not implemented yet.   
 
 ## Progress
 
 - [x] Stage 1: Lexical and syntax analysis
 - [x] Stage 2: Type checking
-- [x] Stage 3: Intermediate code generation
+- [x] Stage 3: Code generation
 
 ## Compilation
 
@@ -29,7 +26,7 @@ To compile the compiler, just run
 $ make clean && make
 ```
 
-To compile a mini-go source program, type the following command
+To compile and run a mini-go source program, type the following command
 
 ```bash
 $ ./calc /path/to/your/program
@@ -39,11 +36,20 @@ $ ./calc /path/to/your/program
 
 Example programs are available in the `examples` folder. Every example program in that folder tests one or more language features.
 
-- eqgt.go: tests the `==` and `>` operator
-- func.go: tests calling function (FuncCall)
-- ite.go: tests `if exp {} else {}` structure and variable declaration in inner scope
-- return.go: tests calling function that returns a value (FuncExp) and recursive function call
 - arithmetic: tests arithmetic operations
+- eqgt.go: tests the `==` and `>` operator
+- ite.go: tests `if exp {} else {}` structure and variable declaration in inner scope
 - while.go: tests while loop (it's a infinite loop, will cause stack overflow)
+- func.go: tests calling function as statement (`FuncCall`)
+- return.go: tests calling function as expression (`FuncExp`) and recursive function call
 
 ## Known Issues
+
+### Negative integers not supported
+
+Our compiler doesn't support negative numbers. However, negative number doesn't seems to be part of the language specification.
+
+### Returning variables in inner scope not supported
+
+Although variable declaration/redeclaration in inner scope is supported, returning a variable in the inner scope is not supported. This 
+is because the return statement must be the last statement. Therefore, variables in inner scope cannot be accessed by the return statement.
