@@ -223,12 +223,12 @@ let rec translateStmt stmt env locals = match stmt with
                             [IRC_Goto l1]
                             @
                             [IRC_Label l2],
-                            (env, locals))
+                            (env, (snd (snd r2))))
   | ITE (exp1, stmt1, stmt2) -> let l1 = freshLabel() in
                                 let l2 = freshLabel() in
                                 let r1 = translateExp exp1 env in
                                 let r2 = translateStmt stmt1 (Environ (Some env, [])) locals in
-                                let r3 = translateStmt stmt2 (Environ (Some env, [])) locals in
+                                let r3 = translateStmt stmt2 (Environ (Some env, [])) (snd (snd r2)) in
                                 ((fst r1)
                                  @
                                  [IRC_ZeroJump ((snd r1), l2)]
@@ -240,7 +240,7 @@ let rec translateStmt stmt env locals = match stmt with
                                  (fst r3)
                                  @
                                  [IRC_Label l1],
-                                 (env, locals))
+                                 (env, (snd (snd r3))))
   | FuncCall (funcName, args) -> let r1 = List.map (fun x -> translateExp x env) args in
                                  let r2 = List.concat (List.map fst r1) in
                                  let r3 = List.map (fun x -> IRC_Param (snd x)) r1 in
