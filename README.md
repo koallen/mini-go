@@ -1,6 +1,6 @@
 # Mini GO
 
-CS4212 Compiler Design, AY 2016-17 Semester 1
+CS4212 Compiler Design, AY 2016-17 Semester 1 @ National University of Singapore
 
 ## Group Members
 
@@ -10,7 +10,7 @@ CS4212 Compiler Design, AY 2016-17 Semester 1
 
 ## Description
 
-This is a compiler for the mini GO language.
+This is a compiler for the mini GO language. For the language specification, please visit [here](http://www.home.hs-karlsruhe.de/~suma0002/CS4212/project.html#(6)).
 
 ## Progress
 
@@ -36,7 +36,7 @@ $ ./calc /path/to/your/program
 
 Example programs are available in the `examples` folder. Every example program in that folder tests one or more language features.
 
-- arithmetic: tests arithmetic operations
+- arithmetic.go: tests arithmetic operations
 - eqgt.go: tests the `==` and `>` operator
 - ite.go: tests `if exp {} else {}` structure and variable declaration in inner scope
 - while.go: tests while loop (it's a infinite loop, will cause stack overflow)
